@@ -75,6 +75,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
             )
         )
 
+        # Create DynamoDb Table with contributor insights for monitoring
         # Create DynamoDb Table with point-in-time recovery
         demo_table = dynamodb_.Table(
             self,
@@ -82,6 +83,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
             partition_key=dynamodb_.Attribute(
                 name="id", type=dynamodb_.AttributeType.STRING
             ),
+            contributor_insights_enabled=True,
             point_in_time_recovery=True,
         )
 
@@ -99,6 +101,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
             ),
             memory_size=1024,
             timeout=Duration.minutes(5),
+            tracing=lambda_.Tracing.ACTIVE,
             log_retention=logs.RetentionDays.ONE_YEAR,
         )
 
@@ -106,6 +109,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
         demo_table.grant_write_data(api_hanlder)
         api_hanlder.add_environment("TABLE_NAME", demo_table.table_name)
 
+        # Create API Gateway with X-Ray tracing enabled
         # Create CloudWatch Log Group for API Gateway Access Logs
         api_log_group = logs.LogGroup(
             self,
@@ -120,6 +124,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
             "Endpoint",
             handler=api_hanlder,
             deploy_options=apigw_.StageOptions(
+                tracing_enabled=True,
                 access_log_destination=apigw_.LogGroupLogDestination(api_log_group),
                 access_log_format=apigw_.AccessLogFormat.json_with_standard_fields(
                     caller=True,

@@ -6,6 +6,8 @@
 
 Creates an [AWS Lambda](https://aws.amazon.com/lambda/) function writing to [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) and invoked by [Amazon API Gateway](https://aws.amazon.com/api-gateway/) REST API. 
 
+This sample includes AWS X-Ray tracing for end-to-end request monitoring across API Gateway, Lambda, and DynamoDB.
+=======
 This sample includes comprehensive logging for security investigations and compliance:
 - VPC Flow Logs for network traffic monitoring
 - API Gateway access logs with detailed request information
@@ -92,6 +94,12 @@ You should get below response
 {"message": "Successfully inserted data!"}
 ```
 
+## Monitoring with X-Ray
+
+After deployment, you can view end-to-end traces in the AWS X-Ray console:
+1. Navigate to AWS X-Ray in the AWS Console
+2. Select "Service Map" to visualize request flow through API Gateway → Lambda → DynamoDB
+3. Select "Traces" to view detailed request timelines and identify performance bottlenecks
 ## Security Logging and Monitoring
 
 After deployment, logs are available in CloudWatch Logs for security investigations:
