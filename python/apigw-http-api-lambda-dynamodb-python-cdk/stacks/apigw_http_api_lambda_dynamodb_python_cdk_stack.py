@@ -9,7 +9,9 @@ from aws_cdk import (
     aws_apigateway as apigw_,
     aws_ec2 as ec2,
     aws_iam as iam,
+    aws_logs as logs,
     Duration,
+    RemovalPolicy,
 )
 from constructs import Construct
 
@@ -31,6 +33,21 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
                     cidr_mask=24
                 )
             ],
+        )
+        
+        # Create CloudWatch Log Group for VPC Flow Logs
+        vpc_flow_log_group = logs.LogGroup(
+            self,
+            "VpcFlowLogGroup",
+            retention=logs.RetentionDays.ONE_YEAR,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        
+        # Enable VPC Flow Logs
+        vpc.add_flow_log(
+            "FlowLog",
+            destination=ec2.FlowLogDestination.to_cloud_watch_logs(vpc_flow_log_group),
+            traffic_type=ec2.FlowLogTrafficType.ALL,
         )
         
         # Create VPC endpoint
@@ -59,6 +76,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
         )
 
         # Create DynamoDb Table with contributor insights for monitoring
+        # Create DynamoDb Table with point-in-time recovery
         demo_table = dynamodb_.Table(
             self,
             TABLE_NAME,
@@ -66,6 +84,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
                 name="id", type=dynamodb_.AttributeType.STRING
             ),
             contributor_insights_enabled=True,
+            point_in_time_recovery=True,
         )
 
         # Create the Lambda function to receive the request
@@ -83,6 +102,7 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
             memory_size=1024,
             timeout=Duration.minutes(5),
             tracing=lambda_.Tracing.ACTIVE,
+            log_retention=logs.RetentionDays.ONE_YEAR,
         )
 
         # grant permission to lambda to write to demo table
@@ -90,11 +110,32 @@ class ApigwHttpApiLambdaDynamodbPythonCdkStack(Stack):
         api_hanlder.add_environment("TABLE_NAME", demo_table.table_name)
 
         # Create API Gateway with X-Ray tracing enabled
+        # Create CloudWatch Log Group for API Gateway Access Logs
+        api_log_group = logs.LogGroup(
+            self,
+            "ApiGatewayAccessLogs",
+            retention=logs.RetentionDays.ONE_YEAR,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        # Create API Gateway with access logging
         apigw_.LambdaRestApi(
             self,
             "Endpoint",
             handler=api_hanlder,
             deploy_options=apigw_.StageOptions(
                 tracing_enabled=True,
+                access_log_destination=apigw_.LogGroupLogDestination(api_log_group),
+                access_log_format=apigw_.AccessLogFormat.json_with_standard_fields(
+                    caller=True,
+                    http_method=True,
+                    ip=True,
+                    protocol=True,
+                    request_time=True,
+                    resource_path=True,
+                    response_length=True,
+                    status=True,
+                    user=True,
+                ),
             ),
         )

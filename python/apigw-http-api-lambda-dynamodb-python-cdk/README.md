@@ -7,6 +7,13 @@
 Creates an [AWS Lambda](https://aws.amazon.com/lambda/) function writing to [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) and invoked by [Amazon API Gateway](https://aws.amazon.com/api-gateway/) REST API. 
 
 This sample includes AWS X-Ray tracing for end-to-end request monitoring across API Gateway, Lambda, and DynamoDB.
+=======
+This sample includes comprehensive logging for security investigations and compliance:
+- VPC Flow Logs for network traffic monitoring
+- API Gateway access logs with detailed request information
+- Lambda function logs with structured JSON format and security context
+- DynamoDB point-in-time recovery for data protection
+- 1-year log retention for all CloudWatch log groups
 
 ![architecture](docs/architecture.png)
 
@@ -93,6 +100,31 @@ After deployment, you can view end-to-end traces in the AWS X-Ray console:
 1. Navigate to AWS X-Ray in the AWS Console
 2. Select "Service Map" to visualize request flow through API Gateway → Lambda → DynamoDB
 3. Select "Traces" to view detailed request timelines and identify performance bottlenecks
+## Security Logging and Monitoring
+
+After deployment, logs are available in CloudWatch Logs for security investigations:
+
+### VPC Flow Logs
+- Navigate to CloudWatch Logs and find the log group with "VpcFlowLogGroup" in the name
+- View network traffic patterns for the Lambda function's VPC
+- Useful for detecting unauthorized access attempts or unusual network behavior
+
+### API Gateway Access Logs
+- Find the log group with "ApiGatewayAccessLogs" in the name
+- View detailed request information including source IP, caller identity, request/response details
+- Logs are in JSON format for easy querying with CloudWatch Logs Insights
+
+### Lambda Function Logs
+- Find the log group `/aws/lambda/apigw_handler`
+- Logs include structured JSON with request IDs, source IPs, and operation details
+- Use CloudWatch Logs Insights to query and analyze application behavior
+
+### Example CloudWatch Logs Insights Query
+```
+fields @timestamp, requestId, sourceIp, message, itemId
+| filter message = "Data inserted successfully"
+| sort @timestamp desc
+```
 
 ## Cleanup 
 Run below script to delete AWS resources created by this sample stack.
